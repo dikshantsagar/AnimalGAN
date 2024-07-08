@@ -34,8 +34,6 @@ def train(generator, discriminator, dataloader, n_epochs, n_critic, Z_dim, devic
     optimizer_G = torch.optim.Adam(generator.parameters(), lr=lr, betas=(b1, b2))
     optimizer_D = torch.optim.Adam(discriminator.parameters(), lr=lr, betas=(b1, b2))
 
-    d_i = 0
-    g_i = 0
     # Training loop
     for epoch in range(n_epochs):
         for i, (Measurement, Stru, Time, Dose) in enumerate(dataloader):
@@ -54,8 +52,7 @@ def train(generator, discriminator, dataloader, n_epochs, n_critic, Z_dim, devic
                                                         device)
             # Backpropagate and optimize the discriminator
             d_loss = -torch.mean(validity_real) + torch.mean(validity_fake) + lambda_gp * gradient_penalty
-            writer.add_scalar('d_loss',d_loss, d_i)
-            d_i+=1
+            
 
             d_loss.backward()
             optimizer_D.step()
@@ -65,8 +62,8 @@ def train(generator, discriminator, dataloader, n_epochs, n_critic, Z_dim, devic
                 gen_Measurement = generator(z, Stru, Time, Dose)
                 validity = discriminator(gen_Measurement, Stru, Time, Dose)
                 g_loss = -torch.mean(validity)
-                writer.add_scalar('g_loss',g_loss, g_i)
-                g_i+=1
+                writer.add_scalar('loss/d_loss',d_loss, epoch)
+                writer.add_scalar('loss/g_loss',g_loss, epoch)
 
                 # Update generator
                 optimizer_G.zero_grad()
