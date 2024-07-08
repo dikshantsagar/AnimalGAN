@@ -62,8 +62,7 @@ def train(generator, discriminator, dataloader, n_epochs, n_critic, Z_dim, devic
                 gen_Measurement = generator(z, Stru, Time, Dose)
                 validity = discriminator(gen_Measurement, Stru, Time, Dose)
                 g_loss = -torch.mean(validity)
-                writer.add_scalar('loss/d_loss',d_loss, epoch)
-                writer.add_scalar('loss/g_loss',g_loss, epoch)
+                writer.add_scalar('loss/loss',{'d_loss': d_loss, 'g_loss': g_loss}, epoch)
 
                 # Update generator
                 optimizer_G.zero_grad()
