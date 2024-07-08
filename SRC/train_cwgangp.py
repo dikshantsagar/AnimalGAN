@@ -62,7 +62,8 @@ def train(generator, discriminator, dataloader, n_epochs, n_critic, Z_dim, devic
                 gen_Measurement = generator(z, Stru, Time, Dose)
                 validity = discriminator(gen_Measurement, Stru, Time, Dose)
                 g_loss = -torch.mean(validity)
-                writer.add_scalar('loss/loss',{'d_loss': d_loss, 'g_loss': g_loss}, epoch)
+                writer.add_scalar('loss/Disc',d_loss, epoch)
+                writer.add_scalar('loss/Gen',g_loss, epoch)
 
                 # Update generator
                 optimizer_G.zero_grad()
@@ -92,6 +93,12 @@ if __name__ == '__main__':
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
     writer = SummaryWriter()
+    layout = {
+                "Losses": {
+                    "loss": ["Multiline", ["loss/Disc", "loss/Gen"]],
+                },
+            }
+    writer.add_custom_scalars(layout)
 
     data_path = os.path.join(path, 'Data', 'Example_Data_training.tsv')
     descriptors_path = os.path.join(path, 'Data', 'Example_MolecularDescriptors.tsv')
