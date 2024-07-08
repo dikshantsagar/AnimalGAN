@@ -25,7 +25,7 @@ def compute_gradient_penalty(discriminator, real_samples, fake_samples, Stru, Ti
 
 
 def train(generator, discriminator, dataloader, n_epochs, n_critic, Z_dim, device, lr, b1, b2, interval, model_path,
-          lambda_gp):
+          lambda_gp, writer):
     '''
     :param lambda_gp: Loss weight for gradient penalty
     '''
@@ -34,6 +34,8 @@ def train(generator, discriminator, dataloader, n_epochs, n_critic, Z_dim, devic
     optimizer_G = torch.optim.Adam(generator.parameters(), lr=lr, betas=(b1, b2))
     optimizer_D = torch.optim.Adam(discriminator.parameters(), lr=lr, betas=(b1, b2))
 
+    d_i = 0
+    g_i = 0
     # Training loop
     for epoch in range(n_epochs):
         for i, (Measurement, Stru, Time, Dose) in enumerate(dataloader):
@@ -52,6 +54,8 @@ def train(generator, discriminator, dataloader, n_epochs, n_critic, Z_dim, devic
                                                         device)
             # Backpropagate and optimize the discriminator
             d_loss = -torch.mean(validity_real) + torch.mean(validity_fake) + lambda_gp * gradient_penalty
+            writer.add_scalar('d_loss',d_loss, d_i)
+            d_i+=1
 
             d_loss.backward()
             optimizer_D.step()
@@ -61,6 +65,8 @@ def train(generator, discriminator, dataloader, n_epochs, n_critic, Z_dim, devic
                 gen_Measurement = generator(z, Stru, Time, Dose)
                 validity = discriminator(gen_Measurement, Stru, Time, Dose)
                 g_loss = -torch.mean(validity)
+                writer.add_scalar('g_loss',g_loss, g_i)
+                g_i+=1
 
                 # Update generator
                 optimizer_G.zero_grad()
@@ -74,6 +80,8 @@ def train(generator, discriminator, dataloader, n_epochs, n_critic, Z_dim, devic
             if not os.path.exists(model_path):
                 os.makedirs(model_path)
             torch.save(generator.state_dict(), os.path.join(model_path, 'generator_{}'.format(epoch + 1)))
+    
+    writer.close()
 
 
 if __name__ == '__main__':
@@ -81,10 +89,13 @@ if __name__ == '__main__':
     from utils import create_custom_dataloader
     from opt import parse_opt
     from model import Generator, Discriminator
+    from tensorboardX import SummaryWriter
 
     path = r'./'
     opt = parse_opt()
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+    writer = SummaryWriter()
 
     data_path = os.path.join(path, 'Data', 'Example_Data_training.tsv')
     descriptors_path = os.path.join(path, 'Data', 'Example_MolecularDescriptors.tsv')
@@ -95,4 +106,4 @@ if __name__ == '__main__':
 
     # Training WGAN-GP
     train(generator, discriminator, dataloader, opt.n_epochs, opt.n_critic, opt.Z_dim, device, opt.lr, opt.b1, opt.b2,
-          opt.interval, opt.model_path, opt.lambda_gp)
+          opt.interval, opt.model_path, opt.lambda_gp, writer)
